@@ -65,7 +65,6 @@ def get_drinks():
 @app.route('/drinks-detail', methods=['GET'])
 @requires_auth("get:drinks-detail")
 def get_drinks_detail(payload):
-    print("get drinks detail")
     try:
         drinks = Drink.query.all()
     except:
@@ -90,8 +89,10 @@ def get_drinks_detail(payload):
 @app.route('/drinks', methods=['POST'])
 @requires_auth("post:drinks")
 def add_new_drink(payload):
-
     request_json = request.get_json()
+    if "title" not in request_json or "recipe" not in request_json:
+        abort(400)
+
     try:
         drink = Drink()
         drink.title = request_json['title']
@@ -120,19 +121,17 @@ def add_new_drink(payload):
 def update_drink(payload, drink_id):
     print(request.get_json())
     request_json = request.get_json()
-    try:
-        drink = Drink.query.get(drink_id)
-        if drink == None:
-            abort(404)
 
-        for key in request_json:
-            if hasattr(drink, key) == False:
-                abort(400)
-            setattr(drink, key, request_json[key])
+    drink = Drink.query.get(drink_id)
+    if drink == None:
+        return abort(404)
 
-        drink.update()
-    except:
-        abort(400)
+    for key in request_json:
+        if hasattr(drink, key) == False:
+            abort(400)
+        setattr(drink, key, request_json[key])
+
+    drink.update()
 
     return jsonify({"success": True, "drink": drink.long()})
 
@@ -182,6 +181,25 @@ def unprocessable(error):
     }), 422
 
 
+@app.errorhandler(400)
+def unprocessable(error):
+    # print(error)
+    return jsonify({
+        "success": False,
+        "error": 400,
+        "message": "bad request"
+    }), 400
+
+
+@app.errorhandler(500)
+def unprocessable(error):
+    return jsonify({
+        "success": False,
+        "error": 500,
+        "message": "internal server error"
+    }), 500
+
+
 '''
 @TODO implement error handlers using the @app.errorhandler(error) decorator
     each error handler should return (with approprate messages):
@@ -191,6 +209,12 @@ def unprocessable(error):
                     "message": "resource not found"
                     }), 404
 
+'''
+
+
+'''
+@TODO implement error handler for 404
+    error handler should conform to general task above 
 '''
 @app.errorhandler(404)
 def unprocessable(error):
@@ -202,23 +226,9 @@ def unprocessable(error):
 
 
 '''
-@TODO implement error handler for 404
-    error handler should conform to general task above 
-'''
-
-
-'''
 @TODO implement error handler for AuthError
     error handler should conform to general task above 
 '''
-@app.errorhandler(400)
-def unprocessable(error):
-    # print(error)
-    return jsonify({
-        "success": False,
-        "error": 400,
-        "message": "bad request"
-    }), 400
 
 
 @app.errorhandler(AuthError)
